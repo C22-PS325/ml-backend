@@ -200,7 +200,7 @@ def predictImage():
             except:
                 pass
         
-        return jsonify(prediction)
+        return jsonify({'response': prediction})
 
 @app.route('/api/audio/predict', methods=['POST'])
 def predictAudio():
@@ -234,4 +234,4 @@ def predictAudio():
             os.remove(os.path.join(os.environ.get('UPLOAD_FOLDER'), filename))
         except:
             pass
-        return jsonify(prediction)
+        return jsonify({'response': prediction})
