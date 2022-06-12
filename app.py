@@ -6,6 +6,7 @@ import jwt
 import cv2
 import numpy as np 
 from keras.models import load_model
+from tensorflow_addons.optimizers import AdamW
 # Import libraries
 import pandas as pd
 
@@ -20,41 +21,44 @@ app = Flask(__name__)
 load_dotenv()
 
 def image_predict(image_model, image_cascade, filename, image):
-    faces = image_cascade.detectMultiScale(image,1.1, 3)
-
-    for x,y,w,h in faces:
-        cv2.rectangle(image, (x,y), (x+w, y+h), (0,255,0), 2)
-
-        cropped = image[y:y+h, x:x+w]
-
-    cv2.imwrite(os.path.join(os.environ.get('UPLOAD_FOLDER'), filename + '_after.jpg'), image)
     try:
-        cv2.imwrite(os.path.join(os.environ.get('UPLOAD_FOLDER'), filename + '_cropped.jpg'), cropped)
+        faces = image_cascade.detectMultiScale(image,1.1, 3)
 
+        for x,y,w,h in faces:
+            cv2.rectangle(image, (x,y), (x+w, y+h), (0,255,0), 2)
+
+            cropped = image[y:y+h, x:x+w]
+
+        cv2.imwrite(os.path.join(os.environ.get('UPLOAD_FOLDER'), filename + '_after.jpg'), image)
+        try:
+            cv2.imwrite(os.path.join(os.environ.get('UPLOAD_FOLDER'), filename + '_cropped.jpg'), cropped)
+
+        except:
+            pass
+
+        try:
+            img = cv2.imread(os.path.join(os.environ.get('UPLOAD_FOLDER'), filename + '_cropped.jpg'), 0)
+
+        except:
+            img = cv2.imread(os.path.join(os.environ.get('UPLOAD_FOLDER'), filename + '_after.jpg'), 0)
+
+        img = cv2.resize(img, (392,384), 3)
+
+        img = img/255
+
+        img = img.reshape(1,224,224,3)
+
+        pred = image_model.predict(img)
+
+        label_emotion =  ['Angry', 'Fear', 'Happy', 'Neutral','Sad','Suprise','disgust']
+
+        pred = np.argmax(pred)
+
+        final_pred = label_emotion[pred]
+
+        return final_pred
     except:
-        pass
-
-    try:
-        img = cv2.imread(os.path.join(os.environ.get('UPLOAD_FOLDER'), filename + '_cropped.jpg'), 0)
-
-    except:
-        img = cv2.imread(os.path.join(os.environ.get('UPLOAD_FOLDER'), filename + '_after.jpg'), 0)
-
-    img = cv2.resize(img, (392,384), 3)
-
-    img = img/255
-
-    img = img.reshape(1,224,224,3)
-
-    pred = image_model.predict(img)
-
-    label_emotion =  ['Angry', 'Fear', 'Happy', 'Neutral','Sad','Suprise','disgust']
-
-    pred = np.argmax(pred)
-
-    final_pred = label_emotion[pred]
-
-    return final_pred
+        return 'Invalid'
 
 # augmentation audio data
 def noise(data):
@@ -182,7 +186,7 @@ def predictImage():
     else:
         files = request.files.getlist("file")
         prediction = []
-        image_model = load_model('ml_model/image_model.h5')
+        image_model = load_model('ml_model/image_model.h5', custom_objects = {'AdamW' : AdamW})
         image_cascade = cv2.CascadeClassifier('ml_model/haarcascade_frontalface_alt2.xml')
 
         for file in files:
