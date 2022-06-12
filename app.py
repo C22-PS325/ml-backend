@@ -222,7 +222,7 @@ def predictAudio():
     if 'file' not in request.files:
         return jsonify({
             'status': 'failed',
-            'message': 'no image files'
+            'message': 'no audio files'
         })
     else:
         file = request.files['file']
